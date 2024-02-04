@@ -12,21 +12,26 @@
         body {
             font-family: Arial, sans-serif;
         }
+
         h2, h3 {
             color: #333;
         }
+
         form {
             margin-top: 2rem;
         }
+
         form div {
             margin-bottom: 0.5rem;
         }
+
         form div label {
             display: inline-block;
             width: 16rem;
             text-align: right;
             margin-right: 1rem;
         }
+
         button {
             background-color: #4CAF50;
             border: none;
@@ -39,6 +44,7 @@
             margin: 1rem 0.2rem;
             cursor: pointer;
         }
+
         p#output {
             background: #f8f8f8;
             padding: 0.5rem 2rem;
@@ -54,8 +60,8 @@
 <h2>Dark Souls 3 level up consumables calculator</h2>
 <p>
     This calculator will help you optimize the use of soul consumables to level up in Dark Souls 3. It will calculate
-    the highest level you can reach with your current souls and consumables, and tell you exactly which items to use to
-    minimize waste (i.e. leftover soft souls).
+    the highest level you can reach, and tell you exactly which items to use to minimize waste (i.e. leftover soft
+    souls).
 </p>
 
 <form id="ds3Calc">
@@ -191,6 +197,7 @@
 
         document.getElementById("output").innerHTML = levelInfo + soulsInfo + usedItemsInfo;
     }
+
     calculate();
 </script>
 
