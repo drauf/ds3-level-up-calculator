@@ -174,23 +174,31 @@
             };
         }
 
-        // solve the knapsack problem for notNeeded
-        const notNeeded = soulsLeftAfterLevellingUp;
+        // solve the knapsack problem for notNeeded, using the fact that all values are multiples of 50
+        const notNeeded = Math.floor(soulsLeftAfterLevellingUp / 50);
         let dp = Array.from({length: notNeeded + 1}, () => 0);
         let unusedItems = Array.from({length: notNeeded + 1}, () => []);
+
         for (let i = 0; i < inventory.length; i++) {
-            for (let j = notNeeded; j >= inventory[i].value; j--) {
-                if (dp[j] < dp[j - inventory[i].value] + inventory[i].value) {
-                    dp[j] = dp[j - inventory[i].value] + inventory[i].value;
-                    unusedItems[j] = [...unusedItems[j - inventory[i].value], inventory[i].id];
+            const itemValue = inventory[i].value / 50;
+            for (let j = itemValue; j <= notNeeded; j++) {
+                for (let k = 1; k <= inventory[i].quantity; k++) {
+                    if (j < k * itemValue) break;
+                    const newValue = dp[j - k * itemValue] + k * itemValue;
+                    if (dp[j] < newValue) {
+                        dp[j] = newValue;
+                        unusedItems[j] = [...unusedItems[j - k * itemValue], ...Array(k).fill(inventory[i].id)];
+                    }
                 }
             }
         }
+        console.debug(dp);
+        console.debug(unusedItems);
 
         // calculate remaining souls
-        const usedSouls = totalSoulsAvailable - dp[notNeeded];
-        const remainingSoftSouls = soulsLeftAfterLevellingUp - dp[notNeeded];
-        const remainingItemsSouls = dp[notNeeded];
+        const usedSouls = totalSoulsAvailable - dp[notNeeded] * 50;
+        const remainingSoftSouls = soulsLeftAfterLevellingUp - dp[notNeeded] * 50;
+        const remainingItemsSouls = dp[notNeeded] * 50;
 
         // "flip" unused items into used items
         let usedInventory = JSON.parse(JSON.stringify(inventory));
