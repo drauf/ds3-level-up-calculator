@@ -95,8 +95,8 @@
     // Pre-calculate the cost of each level using the formula from DS3 wiki
     const MAX_LEVEL = 802;
     const levelCosts = [0, 0, 673, 689, 706, 723, 740, 757, 775, 793, 811, 829, 847];
-    for (let i = 13; i <= MAX_LEVEL; i++) {
-        levelCosts[i] = Math.floor(0.02 * Math.pow(i, 3) + 3.06 * Math.pow(i, 2) + 105.6 * i - 895);
+    for (let level = 13; level <= MAX_LEVEL; level++) {
+        levelCosts[level] = Math.floor(0.02 * Math.pow(level, 3) + 3.06 * Math.pow(level, 2) + 105.6 * level - 895);
     }
 
     // Define the soul items
@@ -129,13 +129,81 @@
     // Generate the inputs for the soul items
     function generateInputs(items, containerId) {
         const container = document.getElementById(containerId);
-        for (const item of items) {
-            container.innerHTML += '<div><label>' + item.name + ': <input type="number" id="' + item.id + '" min="0" max="999" maxlength="3" value="0"/></label></div>';
-        }
+        items.forEach(item => {
+            const div = document.createElement('div');
+            const label = document.createElement('label');
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.id = item.id;
+            input.min = "0";
+            input.max = "999";
+            input.value = "0";
+            label.textContent = item.name + ": ";
+            label.appendChild(input);
+            div.appendChild(label);
+            container.appendChild(div);
+        });
     }
 
     generateInputs(newGameItems, "newGameItems");
     generateInputs(newGamePlusItems, "newGamePlusItems");
+
+    // https://en.wikipedia.org/wiki/Knapsack_problem
+    function solveKnapsackProblem(maximum, items) {
+        const weights = Array.from({length: maximum + 1}, () => 0);
+        const usedItems = Array.from({length: maximum + 1}, () => []);
+
+        for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+            const itemValue = items[itemIndex].value;
+            for (let remainingValueIndex = maximum; remainingValueIndex >= itemValue; remainingValueIndex--) {
+                for (let quantityIndex = items[itemIndex].quantity; quantityIndex >= 1; quantityIndex--) {
+                    if (remainingValueIndex < quantityIndex * itemValue) continue;
+                    const newValue = weights[remainingValueIndex - quantityIndex * itemValue] + quantityIndex * itemValue;
+                    if (weights[remainingValueIndex] < newValue) {
+                        weights[remainingValueIndex] = newValue;
+                        usedItems[remainingValueIndex] = [...usedItems[remainingValueIndex - quantityIndex * itemValue], ...Array(quantityIndex).fill(items[itemIndex].id)];
+                        items[itemIndex].quantity -= quantityIndex;
+                        break;
+                    }
+                }
+            }
+        }
+
+        const finalItemsValue = weights[maximum];
+        const finalUsedItems = usedItems[maximum];
+        return {finalItemsValue, finalUsedItems};
+    }
+
+    function calculateUsedItems(soulsLeftAfterLevellingUp, inventory) {
+        // use the fact that all item values are multiples of 50 to reduce the problem size
+        const ITEM_VALUE_MULTIPLIER = 50;
+        const scaledSoulsLeftAfterLevellingUp = Math.floor(soulsLeftAfterLevellingUp / ITEM_VALUE_MULTIPLIER);
+        const scaledInventory = JSON.parse(JSON.stringify(inventory)).map(item => {
+            item.value = Math.floor(item.value / ITEM_VALUE_MULTIPLIER);
+            return item;
+        })
+
+        // solve the knapsack problem, i.e. find the combination of items that goes as close to soulsLeftAfterLevellingUp
+        // as possible without going over - we look for items we can skip consuming and still reach the same level
+        const {
+            finalItemsValue,
+            finalUsedItems
+        } = solveKnapsackProblem(scaledSoulsLeftAfterLevellingUp, scaledInventory);
+        const unusedItemsSoulsValue = finalItemsValue * ITEM_VALUE_MULTIPLIER;
+
+        // because we calculated items that we DO NOT consume, we need to "flip" the result to get the items we DO consume
+        const unusedQuantities = {};
+        finalUsedItems.forEach(id => {
+            unusedQuantities[id] = (unusedQuantities[id] || 0) + 1;
+        });
+
+        const usedItems = inventory.map(item => ({
+            ...item,
+            quantity: item.quantity - (unusedQuantities[item.id] || 0)
+        })).filter(item => item.quantity > 0);
+
+        return {unusedItemsSoulsValue, usedItems};
+    }
 
     function optimizeLevelUp(allItems, levelCosts) {
         // fetch current level, soft souls & quantity of each item
@@ -147,20 +215,17 @@
                 quantity: parseInt(document.getElementById(item.id).value, 10) || 0
             }
         }).filter(item => item.quantity > 0);
-        console.debug("Inventory", inventory);
 
         // calculate total souls available
         const totalSoulsAvailable = softSouls + inventory.reduce((sum, item) => sum + (item.value * item.quantity), 0);
-        console.debug("Total souls available", totalSoulsAvailable);
 
+        // calculate the highest level that can be reached with the available souls
         let soulsLeftAfterLevellingUp = totalSoulsAvailable;
         let maxLevel = currLevel;
         while (levelCosts[maxLevel + 1] <= soulsLeftAfterLevellingUp) {
             soulsLeftAfterLevellingUp -= levelCosts[maxLevel + 1];
             maxLevel++;
         }
-        console.debug("Souls left after levelling up", soulsLeftAfterLevellingUp);
-        console.debug("Max level", maxLevel);
 
         // if maxLevel is already at the cap, return early to not waste time on the knapsack problem
         if (maxLevel >= MAX_LEVEL) {
@@ -184,67 +249,26 @@
                 usedItems: []
             };
         }
+        const {unusedItemsSoulsValue, usedItems} = calculateUsedItems(soulsLeftAfterLevellingUp, inventory);
 
-        // solve the knapsack problem for soulsLeftAfterLevelUp, using the fact that all values are multiples of 50
-        // i.e. we look for the combination of items that goes as close to soulsLeftAfterLevelUp as possible
-        const soulsLeftAfterLevelUp = Math.floor(soulsLeftAfterLevellingUp / 50);
-        let dp = Array.from({length: soulsLeftAfterLevelUp + 1}, () => 0);
-        let unusedItems = Array.from({length: soulsLeftAfterLevelUp + 1}, () => []);
-
-        // a deep copy of the inventory is needed because we will modify the quantity of items
-        const items = JSON.parse(JSON.stringify(inventory));
-        for (let i = 0; i < items.length; i++) {
-            const itemValue = items[i].value / 50;
-            for (let j = soulsLeftAfterLevelUp; j >= itemValue; j--) {
-                for (let k = items[i].quantity; k >= 1; k--) {
-                    if (j < k * itemValue) continue;
-                    const newValue = dp[j - k * itemValue] + k * itemValue;
-                    if (dp[j] < newValue) {
-                        dp[j] = newValue;
-                        unusedItems[j] = [...unusedItems[j - k * itemValue], ...Array(k).fill(items[i].id)];
-                        items[i].quantity -= k;
-                        break;
-                    }
-                }
-            }
-        }
-        console.debug("Unused items", unusedItems);
-
-        // track the quantities of unused items (or: items used in the knapsack algorithm)
-        let unusedQuantities = {};
-        unusedItems[soulsLeftAfterLevelUp].forEach(id => {
-            unusedQuantities[id] = (unusedQuantities[id] || 0) + 1;
-        });
-        console.debug("Unused quantities", unusedQuantities);
-
-        // subtract the quantities of unused items from the original inventory to see what was actually used
-        let usedItems = inventory.map(item => ({
-            ...item,
-            quantity: item.quantity - (unusedQuantities[item.id] || 0)
-        })).filter(item => item.quantity > 0);
-        console.debug("Used items", usedItems);
-
-        // calculate remaining souls
-        const unusedItemSoulsValue = dp[soulsLeftAfterLevelUp] * 50;
-        const usedSouls = Math.min(totalSoulsAvailable - unusedItemSoulsValue, levelCosts.slice(currLevel + 1, maxLevel + 1).reduce((a, b) => a + b, 0));
-        const remainingSoftSouls = Math.max(0, totalSoulsAvailable - usedSouls - unusedItemSoulsValue);
-
+        const usedSouls = Math.min(totalSoulsAvailable - unusedItemsSoulsValue, levelCosts.slice(currLevel + 1, maxLevel + 1).reduce((a, b) => a + b, 0));
+        const remainingSoftSouls = Math.max(0, totalSoulsAvailable - usedSouls - unusedItemsSoulsValue);
         return {
             highestLevel: maxLevel,
             nextLevelCost: levelCosts[maxLevel + 1],
-            soulsUsed: usedSouls ? usedSouls : 0,
-            remainingSoftSouls: remainingSoftSouls ? remainingSoftSouls : 0,
-            remainingItemsSouls: unusedItemSoulsValue,
+            soulsUsed: usedSouls,
+            remainingSoftSouls: remainingSoftSouls,
+            remainingItemsSouls: unusedItemsSoulsValue,
             usedItems: usedItems
         };
     }
 
     function calculate() {
         const result = optimizeLevelUp(newGameItems.concat(newGamePlusItems), levelCosts);
-        console.debug("Calculation result", result);
 
         const levelInfo = `<p>Highest Level: ${result.highestLevel}<br/>Souls to Next Level: ${result.nextLevelCost}</p>`;
-        const soulsInfo = `<p>Total souls used: ${result.soulsUsed}<br/>Leftover soft souls: ${result.remainingSoftSouls}<br/>Leftover souls in consumables: ${result.remainingItemsSouls}</p>`;
+        const leftoverSouls = result.remainingSoftSouls + result.remainingItemsSouls;
+        const soulsInfo = `<p>Total souls used: ${result.soulsUsed}<br/>Total leftover souls: ${leftoverSouls}<br/>Leftover soft souls: ${result.remainingSoftSouls}<br/>Leftover souls in consumables: ${result.remainingItemsSouls}</p>`;
         const usedItemsList = result.usedItems.length === 0 ? '<li>None</li>' : `${result.usedItems.map(item => `<li>${item.quantity}x ${item.name}</li>`).join("")}`;
         const usedItemsInfo = `<p>Consumables used:<br/><ul>${usedItemsList}</ul></p>`;
 
