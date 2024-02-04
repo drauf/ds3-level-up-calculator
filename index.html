@@ -27,7 +27,7 @@
 
         form div label {
             display: inline-block;
-            width: 16rem;
+            width: 20rem;
             text-align: right;
             margin-right: 1rem;
         }
@@ -65,8 +65,8 @@
 </p>
 
 <form id="ds3Calc">
-    <div><label>Current character level:</label> <input type="number" id="currLevel" value="1"/></div>
-    <div><label>Current soft souls:</label> <input type="number" id="softSouls" value="0"/></div>
+    <div class="wideInput"><label>Current character level: <input type="number" id="currLevel" min="1" max="820" value="1"/></label></div>
+    <div class="wideInput"><label>Current soft souls: <input type="number" id="softSouls" min="0" value="0"/></label></div>
 
     <h3>New Game Items</h3>
     <div id="newGameItems"></div>
@@ -117,7 +117,7 @@
     function generateInputs(items, containerId) {
         const container = document.getElementById(containerId);
         for (const item of items) {
-            container.innerHTML += '<div><label>' + item.name + ':</label> <input type="number" id="' + item.id + '" value="0"/></div>';
+            container.innerHTML += '<div><label>' + item.name + ': <input type="number" id="' + item.id + '" min="0" max="999" maxlength="3" value="0"/></label></div>';
         }
     }
 
