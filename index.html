@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Dark Souls 3 level up consumables calculator</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="Dark Souls 3, calculator, level up, consumables">
+    <meta name="robots" content="index, follow">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        h2, h3 {
+            color: #333;
+        }
+        form {
+            margin-top: 2rem;
+        }
+        form div {
+            margin-bottom: 0.5rem;
+        }
+        form div label {
+            display: inline-block;
+            width: 16rem;
+            text-align: right;
+            margin-right: 1rem;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 1rem 0.2rem;
+            cursor: pointer;
+        }
+        p#output {
+            background: #f8f8f8;
+            padding: 0.5rem 2rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>Dark Souls 3 level up consumables calculator</h2>
+<p>
+    This calculator will help you optimize the use of soul consumables to level up in Dark Souls 3. It will calculate
+    the highest level you can reach with your current souls and consumables, and tell you exactly which items to use to
+    minimize waste (i.e. leftover soft souls).
+</p>
+
+<form id="ds3Calc">
+    <div><label>Current character level:</label> <input type="number" id="currLevel" value="1"/></div>
+    <div><label>Current soft souls:</label> <input type="number" id="softSouls" value="0"/></div>
+
+    <h3>New Game Items</h3>
+    <div id="newGameItems"></div>
+
+    <h3>New Game+ Items</h3>
+    <div id="newGamePlusItems"></div>
+
+    <button type="button" onclick="calculate()">Calculate</button>
+</form>
+
+<p id="output"></p>
+
+<script>
+    // Pre-calculate the cost of each level using the formula from DS3 wiki
+    const levelCosts = [0, 0, 673, 689, 706, 723, 740, 757, 775, 793, 811, 829, 847];
+    for (let i = 13; i <= 802; i++) {
+        levelCosts[i] = Math.floor(0.02 * Math.pow(i, 3) + 3.06 * Math.pow(i, 2) + 105.6 * i - 895);
+    }
+
+    // Define the soul items
+    const newGameItems = [
+        {id: "fadingSoul", name: "Fading Soul", value: 50},
+        {id: "soulDesertedCorpse", name: "Soul of a Deserted Corpse", value: 200},
+        {id: "largeSoulDesertedCorpse", name: "Large Soul of a Deserted Corpse", value: 400},
+        {id: "soulUnknownTraveler", name: "Soul of an Unknown Traveler", value: 800},
+        {id: "largeSoulUnknownTraveler", name: "Large Soul of an Unknown Traveler", value: 1000},
+        {id: "soulNamelessSoldier", name: "Soul of a Nameless Soldier", value: 2000},
+        {id: "largeSoulNamelessSoldier", name: "Large Soul of a Nameless Soldier", value: 3000},
+        {id: "soulWearyWarrior", name: "Soul of a Weary Warrior", value: 5000},
+        {id: "largeSoulWearyWarrior", name: "Large Soul of a Weary Warrior", value: 8000},
+        {id: "soulCrestfallenKnight", name: "Soul of a Crestfallen Knight", value: 10000},
+        {id: "largeSoulCrestfallenKnight", name: "Large Soul of a Crestfallen Knight", value: 20000}
+    ];
+    const newGamePlusItems = [
+        {id: "soulProudPaladin", name: "Soul of a Proud Paladin", value: 500},
+        {id: "largeSoulProudPaladin", name: "Large Soul of a Proud Paladin", value: 1000},
+        {id: "soulIntrepidHero", name: "Soul of an Intrepid Hero", value: 2000},
+        {id: "largeSoulIntrepidHero", name: "Large Soul of an Intrepid Hero", value: 2500},
+        {id: "soulSeasonedWarrior", name: "Soul of a Seasoned Warrior", value: 5000},
+        {id: "largeSoulSeasonedWarrior", name: "Large Soul of a Seasoned Warrior", value: 7500},
+        {id: "soulOldHand", name: "Soul of an Old Hand", value: 12500},
+        {id: "soulVenerableOldHand", name: "Soul of a Venerable Old Hand", value: 20000},
+        {id: "soulChampion", name: "Soul of a Champion", value: 25000},
+        {id: "soulGreatChampion", name: "Soul of a Great Champion", value: 50000}
+    ];
+
+    // Generate the inputs for the soul items
+    function generateInputs(items, containerId) {
+        const container = document.getElementById(containerId);
+        for (const item of items) {
+            container.innerHTML += '<div><label>' + item.name + ':</label> <input type="number" id="' + item.id + '" value="0"/></div>';
+        }
+    }
+
+    generateInputs(newGameItems, "newGameItems");
+    generateInputs(newGamePlusItems, "newGamePlusItems");
+
+    function optimizeLevelUp(allItems, levelCosts) {
+        // fetch current level, soft souls & quantity of each item
+        const currLevel = parseInt(document.getElementById("currLevel").value, 10) || 1;
+        const softSouls = parseInt(document.getElementById("softSouls").value, 10) || 0;
+        const inventory = allItems.map(item => {
+            return {
+                ...item,
+                quantity: parseInt(document.getElementById(item.id).value, 10) || 0
+            }
+        }).filter(item => item.quantity > 0);
+        console.debug("Inventory", inventory);
+
+        // calculate total souls available
+        const totalSoulsAvailable = softSouls + inventory.reduce((sum, item) => sum + (item.value * item.quantity), 0);
+        console.debug("Total souls available", totalSoulsAvailable);
+
+        let soulsLeftAfterLevellingUp = totalSoulsAvailable;
+        let maxLevel = currLevel;
+        while (levelCosts[maxLevel] <= soulsLeftAfterLevellingUp) {
+            soulsLeftAfterLevellingUp -= levelCosts[maxLevel];
+            maxLevel++;
+        }
+        console.debug("Souls left after levelling up", soulsLeftAfterLevellingUp);
+        console.debug("Max level", maxLevel);
+
+        // solve the knapsack problem for notNeeded
+        const notNeeded = soulsLeftAfterLevellingUp;
+        let dp = Array.from({length: notNeeded + 1}, () => 0);
+        let unusedItems = Array.from({length: notNeeded + 1}, () => []);
+        for (let i = 0; i < inventory.length; i++) {
+            for (let j = notNeeded; j >= inventory[i].value; j--) {
+                if (dp[j] < dp[j - inventory[i].value] + inventory[i].value) {
+                    dp[j] = dp[j - inventory[i].value] + inventory[i].value;
+                    unusedItems[j] = [...unusedItems[j - inventory[i].value], inventory[i].id];
+                }
+            }
+        }
+
+        // calculate remaining souls
+        const usedSouls = totalSoulsAvailable - dp[notNeeded];
+        const remainingSoftSouls = soulsLeftAfterLevellingUp - dp[notNeeded];
+        const remainingItemsSouls = dp[notNeeded];
+
+        // "flip" unused items into used items
+        let usedInventory = JSON.parse(JSON.stringify(inventory));
+        unusedItems[notNeeded].forEach(id => {
+            let item = usedInventory.find(item => item.id === id);
+            item.quantity--;
+        });
+        usedInventory = usedInventory.filter(item => item.quantity > 0);
+        console.debug("Used items", usedInventory);
+
+        return {
+            highestLevel: maxLevel,
+            nextLevelCost: levelCosts[maxLevel],
+            soulsUsed: usedSouls ? usedSouls : 0,
+            remainingSoftSouls: remainingSoftSouls ? remainingSoftSouls : 0,
+            remainingItemsSouls: remainingItemsSouls ? remainingItemsSouls : 0,
+            usedItems: usedInventory
+        };
+    }
+
+    function calculate() {
+        const result = optimizeLevelUp(newGameItems.concat(newGamePlusItems), levelCosts);
+        console.debug("Calculation result", result);
+
+        const levelInfo = `<p>Highest Level: ${result.highestLevel}<br/>Souls to Next Level: ${result.nextLevelCost}</p>`;
+        const soulsInfo = `<p>Total souls used: ${result.soulsUsed}<br/>Leftover soft souls: ${result.remainingSoftSouls}<br/>Leftover souls in consumables: ${result.remainingItemsSouls}</p>`;
+        const usedItemsList = result.usedItems.length === 0 ? '<li>None</li>' : `${result.usedItems.map(item => `<li>${item.quantity}x ${item.name}</li>`).join("")}`;
+        const usedItemsInfo = `<p>Consumables used:<br/><ul>${usedItemsList}</ul></p>`;
+
+        document.getElementById("output").innerHTML = levelInfo + soulsInfo + usedItemsInfo;
+    }
+    calculate();
+</script>
+
+</body>
+
+</html>
