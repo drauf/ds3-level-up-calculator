@@ -74,8 +74,10 @@
 </p>
 
 <form id="ds3Calc">
-    <div class="wideInput"><label>Current character level: <input type="number" id="currLevel" min="1" max="820" value="1"/></label></div>
-    <div class="wideInput"><label>Current soft souls: <input type="number" id="softSouls" min="0" value="0"/></label></div>
+    <div class="wideInput"><label>Current character level: <input type="number" id="currLevel" min="1" max="802"
+                                                                  value="1"/></label></div>
+    <div class="wideInput"><label>Current soft souls: <input type="number" id="softSouls" min="0" max="9999999999"
+                                                             value="0"/></label></div>
 
     <h3>New Game Items</h3>
     <div id="newGameItems"></div>
@@ -91,8 +93,9 @@
 
 <script>
     // Pre-calculate the cost of each level using the formula from DS3 wiki
+    const MAX_LEVEL = 803;
     const levelCosts = [0, 0, 673, 689, 706, 723, 740, 757, 775, 793, 811, 829, 847];
-    for (let i = 13; i <= 802; i++) {
+    for (let i = 13; i <= MAX_LEVEL; i++) {
         levelCosts[i] = Math.floor(0.02 * Math.pow(i, 3) + 3.06 * Math.pow(i, 2) + 105.6 * i - 895);
     }
 
@@ -158,6 +161,18 @@
         }
         console.debug("Souls left after levelling up", soulsLeftAfterLevellingUp);
         console.debug("Max level", maxLevel);
+
+        // if maxLevel is already at the cap, return early to not waste time on the knapsack problem
+        if (maxLevel >= MAX_LEVEL) {
+            return {
+                highestLevel: MAX_LEVEL,
+                nextLevelCost: "N/A",
+                soulsUsed: "N/A",
+                remainingSoftSouls: "N/A",
+                remainingItemsSouls: "N/A",
+                usedItems: []
+            };
+        }
 
         // solve the knapsack problem for notNeeded
         const notNeeded = soulsLeftAfterLevellingUp;
