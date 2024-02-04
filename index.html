@@ -11,6 +11,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            font-size: 16px;
         }
 
         h2, h3 {
@@ -29,20 +30,28 @@
             display: inline-block;
             width: 20rem;
             text-align: right;
-            margin-right: 1rem;
         }
 
         button {
-            background-color: #4CAF50;
             border: none;
-            color: white;
             padding: 1rem 2rem;
             text-align: center;
-            text-decoration: none;
             display: inline-block;
-            font-size: 16px;
+            font-size: 1rem;
             margin: 1rem 0.2rem;
             cursor: pointer;
+        }
+
+        .primary-button {
+            background-color: #2f4f4f;
+            color: white;
+            text-decoration: none;
+        }
+
+        .secondary-button {
+            background-color: transparent;
+            color: #708090;
+            text-decoration: underline;
         }
 
         p#output {
@@ -74,7 +83,8 @@
     <h3>New Game+ Items</h3>
     <div id="newGamePlusItems"></div>
 
-    <button type="button" onclick="calculate()">Calculate</button>
+    <button type="button" class="primary-button" onclick="calculate()">Calculate</button>
+    <button type="button" class="secondary-button" onclick="resetInputs()">Reset</button>
 </form>
 
 <p id="output"></p>
@@ -196,6 +206,17 @@
         const usedItemsInfo = `<p>Consumables used:<br/><ul>${usedItemsList}</ul></p>`;
 
         document.getElementById("output").innerHTML = levelInfo + soulsInfo + usedItemsInfo;
+    }
+
+    function resetInputs() {
+        document.getElementById("currLevel").value = 1;
+        document.getElementById("softSouls").value = 0;
+
+        const allItems = newGameItems.concat(newGamePlusItems);
+        allItems.forEach(item => {
+            document.getElementById(item.id).value = 0;
+        });
+        calculate();
     }
 
     calculate();
