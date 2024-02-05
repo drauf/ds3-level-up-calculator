@@ -66,30 +66,41 @@
 
 <body>
 
-<h2>Dark Souls 3 level up consumables calculator</h2>
-<p>
-    This calculator will help you optimize the use of soul consumables to level up in Dark Souls 3. It will calculate
-    the highest level you can reach, and tell you exactly which items to use to minimize waste (i.e. leftover soft
-    souls).
-</p>
+<header>
+    <h2>Dark Souls 3 level up consumables calculator</h2>
+    <p>
+        This calculator will help you optimize the use of soul consumables to level up in Dark Souls 3. It will calculate
+        the highest level you can reach, and tell you exactly which items to use to minimize waste (i.e. leftover soft
+        souls).
+    </p>
+</header>
 
-<form id="ds3Calc">
-    <div class="wideInput"><label>Current character level: <input type="number" id="currLevel" min="1" max="801"
-                                                                  value="1"/></label></div>
-    <div class="wideInput"><label>Current soft souls: <input type="number" id="softSouls" min="0" max="9999999999"
-                                                             value="0"/></label></div>
+<main>
+    <form id="ds3Calc">
+        <div class="wideInput"><label>Current character level: <input type="number" id="currLevel" min="1" max="801"
+                                                                    value="1"/></label></div>
+        <div class="wideInput"><label>Current soft souls: <input type="number" id="softSouls" min="0" max="9999999999"
+                                                                value="0"/></label></div>
 
-    <h3>New Game Items</h3>
-    <div id="newGameItems"></div>
+        <h3>New Game Items</h3>
+        <div id="newGameItems"></div>
 
-    <h3>New Game+ Items</h3>
-    <div id="newGamePlusItems"></div>
+        <h3>New Game+ Items</h3>
+        <div id="newGamePlusItems"></div>
 
-    <button type="button" class="primary-button" onclick="calculate()">Calculate</button>
-    <button type="button" class="secondary-button" onclick="resetInputs()">Reset</button>
-</form>
+        <button type="button" class="primary-button" onclick="calculate()">Calculate</button>
+        <button type="button" class="secondary-button" onclick="resetInputs()">Reset</button>
+    </form>
 
-<p id="output"></p>
+    <p id="output"></p>
+</main>
+
+<footer>
+    <ul>
+        <li><a href="https://github.com/drauf/ds3-level-up-calculator/issues">Report an issue</a></li>
+        <li><a href="https://github.com/drauf/ds3-level-up-calculator">Source code</a></li>
+    </ul>
+</footer>
 
 <script>
     // Pre-calculate the cost of each level using the formula from DS3 wiki
